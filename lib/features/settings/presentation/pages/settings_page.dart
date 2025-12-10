@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/units.dart';
+import '../providers/settings_providers.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
 
-class _SettingsPageState extends State<SettingsPage> {
-  // Settings state
-  DepthUnit _depthUnit = DepthUnit.meters;
-  TemperatureUnit _tempUnit = TemperatureUnit.celsius;
-  PressureUnit _pressureUnit = PressureUnit.bar;
-  bool _darkMode = false;
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -25,36 +18,29 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         children: [
           _buildSectionHeader(context, 'Units'),
+          _buildQuickUnitToggle(context, ref, settings),
           _buildUnitTile(
             context,
             title: 'Depth',
-            value: _depthUnit.symbol,
-            onTap: () => _showDepthUnitPicker(),
+            value: settings.depthUnit.symbol,
+            onTap: () => _showDepthUnitPicker(context, ref, settings.depthUnit),
           ),
           _buildUnitTile(
             context,
             title: 'Temperature',
-            value: '°${_tempUnit.symbol}',
-            onTap: () => _showTempUnitPicker(),
+            value: '°${settings.temperatureUnit.symbol}',
+            onTap: () => _showTempUnitPicker(context, ref, settings.temperatureUnit),
           ),
           _buildUnitTile(
             context,
             title: 'Pressure',
-            value: _pressureUnit.symbol,
-            onTap: () => _showPressureUnitPicker(),
+            value: settings.pressureUnit.symbol,
+            onTap: () => _showPressureUnitPicker(context, ref, settings.pressureUnit),
           ),
           const Divider(),
 
           _buildSectionHeader(context, 'Appearance'),
-          SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Use dark theme'),
-            value: _darkMode,
-            onChanged: (value) {
-              setState(() => _darkMode = value);
-              // TODO: Apply theme change
-            },
-          ),
+          _buildThemeSelector(context, ref, settings.themeMode),
           const Divider(),
 
           _buildSectionHeader(context, 'Data'),
@@ -63,7 +49,9 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Import'),
             subtitle: const Text('Import dives from file'),
             onTap: () {
-              // TODO: Import functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Import feature coming soon')),
+              );
             },
           ),
           ListTile(
@@ -79,7 +67,9 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Backup'),
             subtitle: const Text('Create a backup of your data'),
             onTap: () {
-              // TODO: Backup functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Backup feature coming soon')),
+              );
             },
           ),
           ListTile(
@@ -87,7 +77,9 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Restore'),
             subtitle: const Text('Restore from backup'),
             onTap: () {
-              // TODO: Restore functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Restore feature coming soon')),
+              );
             },
           ),
           const Divider(),
@@ -98,7 +90,9 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Connect Dive Computer'),
             subtitle: const Text('Import dives via Bluetooth'),
             onTap: () {
-              // TODO: Dive computer connection
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Dive computer connection coming soon')),
+              );
             },
           ),
           const Divider(),
@@ -126,7 +120,9 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: const Icon(Icons.bug_report),
             title: const Text('Report an Issue'),
             onTap: () {
-              // TODO: Open GitHub issues page
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Visit github.com/submersion/submersion')),
+              );
             },
           ),
           const SizedBox(height: 32),
@@ -144,6 +140,35 @@ class _SettingsPageState extends State<SettingsPage> {
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
+      ),
+    );
+  }
+
+  Widget _buildQuickUnitToggle(BuildContext context, WidgetRef ref, AppSettings settings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SegmentedButton<bool>(
+        segments: const [
+          ButtonSegment(
+            value: true,
+            label: Text('Metric'),
+            icon: Icon(Icons.straighten),
+          ),
+          ButtonSegment(
+            value: false,
+            label: Text('Imperial'),
+            icon: Icon(Icons.square_foot),
+          ),
+        ],
+        selected: {settings.isMetric},
+        onSelectionChanged: (selected) {
+          final isMetric = selected.first;
+          if (isMetric) {
+            ref.read(settingsProvider.notifier).setMetric();
+          } else {
+            ref.read(settingsProvider.notifier).setImperial();
+          }
+        },
       ),
     );
   }
@@ -172,22 +197,43 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showDepthUnitPicker() {
+  Widget _buildThemeSelector(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
+    return ListTile(
+      title: const Text('Theme'),
+      subtitle: Text(_getThemeModeName(currentMode)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _showThemePicker(context, ref, currentMode),
+    );
+  }
+
+  String _getThemeModeName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'System default';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+    }
+  }
+
+  void _showThemePicker(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Depth Unit'),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Theme'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: DepthUnit.values.map((unit) {
-            return RadioListTile<DepthUnit>(
-              title: Text(unit == DepthUnit.meters ? 'Meters (m)' : 'Feet (ft)'),
-              value: unit,
-              groupValue: _depthUnit,
+          children: ThemeMode.values.map((mode) {
+            return RadioListTile<ThemeMode>(
+              title: Text(_getThemeModeName(mode)),
+              secondary: Icon(_getThemeModeIcon(mode)),
+              value: mode,
+              groupValue: currentMode,
               onChanged: (value) {
                 if (value != null) {
-                  setState(() => _depthUnit = value);
-                  Navigator.of(context).pop();
+                  ref.read(settingsProvider.notifier).setThemeMode(value);
+                  Navigator.of(dialogContext).pop();
                 }
               },
             );
@@ -197,10 +243,46 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showTempUnitPicker() {
+  IconData _getThemeModeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+    }
+  }
+
+  void _showDepthUnitPicker(BuildContext context, WidgetRef ref, DepthUnit currentUnit) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Depth Unit'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: DepthUnit.values.map((unit) {
+            return RadioListTile<DepthUnit>(
+              title: Text(unit == DepthUnit.meters ? 'Meters (m)' : 'Feet (ft)'),
+              value: unit,
+              groupValue: currentUnit,
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(settingsProvider.notifier).setDepthUnit(value);
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showTempUnitPicker(BuildContext context, WidgetRef ref, TemperatureUnit currentUnit) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Temperature Unit'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -210,11 +292,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   ? 'Celsius (°C)'
                   : 'Fahrenheit (°F)'),
               value: unit,
-              groupValue: _tempUnit,
+              groupValue: currentUnit,
               onChanged: (value) {
                 if (value != null) {
-                  setState(() => _tempUnit = value);
-                  Navigator.of(context).pop();
+                  ref.read(settingsProvider.notifier).setTemperatureUnit(value);
+                  Navigator.of(dialogContext).pop();
                 }
               },
             );
@@ -224,10 +306,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showPressureUnitPicker() {
+  void _showPressureUnitPicker(BuildContext context, WidgetRef ref, PressureUnit currentUnit) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Pressure Unit'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -235,11 +317,11 @@ class _SettingsPageState extends State<SettingsPage> {
             return RadioListTile<PressureUnit>(
               title: Text(unit == PressureUnit.bar ? 'Bar' : 'PSI'),
               value: unit,
-              groupValue: _pressureUnit,
+              groupValue: currentUnit,
               onChanged: (value) {
                 if (value != null) {
-                  setState(() => _pressureUnit = value);
-                  Navigator.of(context).pop();
+                  ref.read(settingsProvider.notifier).setPressureUnit(value);
+                  Navigator.of(dialogContext).pop();
                 }
               },
             );
@@ -252,7 +334,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showExportOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -261,8 +343,10 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Export as UDDF'),
               subtitle: const Text('Universal Dive Data Format (XML)'),
               onTap: () {
-                Navigator.of(context).pop();
-                // TODO: Export as UDDF
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('UDDF export coming soon')),
+                );
               },
             ),
             ListTile(
@@ -270,8 +354,10 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Export as CSV'),
               subtitle: const Text('Spreadsheet format'),
               onTap: () {
-                Navigator.of(context).pop();
-                // TODO: Export as CSV
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('CSV export coming soon')),
+                );
               },
             ),
             ListTile(
@@ -279,8 +365,10 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Export as PDF'),
               subtitle: const Text('Printable logbook'),
               onTap: () {
-                Navigator.of(context).pop();
-                // TODO: Export as PDF
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('PDF export coming soon')),
+                );
               },
             ),
           ],
@@ -299,12 +387,12 @@ class _SettingsPageState extends State<SettingsPage> {
         size: 64,
         color: Theme.of(context).colorScheme.primary,
       ),
-      children: [
-        const Text(
+      children: const [
+        Text(
           'An open-source dive logging application.',
         ),
-        const SizedBox(height: 16),
-        const Text(
+        SizedBox(height: 16),
+        Text(
           'Track your dives, manage gear, and explore dive sites.',
         ),
       ],

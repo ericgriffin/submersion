@@ -28,9 +28,8 @@ class SiteListPage extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.map),
-            onPressed: () {
-              // TODO: Show map view
-            },
+            tooltip: 'Map View',
+            onPressed: () => context.push('/sites/map'),
           ),
         ],
       ),

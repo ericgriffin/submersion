@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/dive.dart';
 import '../providers/dive_providers.dart';
+import '../widgets/dive_profile_chart.dart';
 
 class DiveDetailPage extends ConsumerWidget {
   final String diveId;
@@ -217,29 +218,33 @@ class DiveDetailPage extends ConsumerWidget {
 
   Widget _buildProfileSection(BuildContext context, Dive dive) {
     return Card(
-      child: Container(
-        height: 200,
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.show_chart,
-                size: 48,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Dive Profile',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              Text(
-                '${dive.profile.length} data points',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Dive Profile',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '${dive.profile.length} points',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DiveProfileChart(
+              profile: dive.profile,
+              diveDuration: dive.duration,
+              maxDepth: dive.maxDepth,
+            ),
+          ],
         ),
       ),
     );
